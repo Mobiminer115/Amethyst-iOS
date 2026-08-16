@@ -32,8 +32,6 @@ jobs:
           rm -rf gl4es
           git clone --depth 1 --branch v1.1.6 https://github.com/ptitSeb/gl4es.git gl4es
           cd gl4es
-
-          # Darwin/AppleClang does not support GCC-style symbol aliases.
           python3 - <<'PY'
           from pathlib import Path
           p = Path('src/gl/directstate.c')
@@ -52,6 +50,7 @@ jobs:
           PY
 
           curl -L --fail --retry 3 -o ios.toolchain.cmake https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
+          export GL4ES_IOS_LDFLAGS='-framework OpenGLES'
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
@@ -61,8 +60,10 @@ jobs:
             -DSTATICLIB=OFF \
             -DPLATFORM=OS64 \
             -DCMAKE_C_FLAGS='-Wno-error=implicit-function-declaration' \
-            -DCMAKE_SHARED_LINKER_FLAGS='-framework OpenGLES'
-          cmake --build build --config RelWithDebInfo --target GL
+            -DCMAKE_SHARED_LINKER_FLAGS="$GL4ES_IOS_LDFLAGS" \
+            -DCMAKE_MODULE_LINKER_FLAGS="$GL4ES_IOS_LDFLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="$GL4ES_IOS_LDFLAGS"
+          cmake --build build --config RelWithDebInfo --target GL --verbose
           test -f lib/libGL.dylib
           cp -f lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
           cd ..
@@ -92,7 +93,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}-trollstore.tipa
-          path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}-trollstore.tipa
+          path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}.tipa
       - name: Upload slimmed ipa
         uses: actions/upload-artifact@v4
         with:
@@ -102,7 +103,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}-trollstore.tipa
-          path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}-trollstore.tipa
+          path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}.tipa
       - name: Upload Amethyst dSYM
         uses: actions/upload-artifact@v4
         if: matrix.platform_name == 'ios'
