@@ -18,19 +18,13 @@ jobs:
         include:
           - platform: 2
             platform_name: ios
-
-    # Use a standard GitHub-hosted macOS runner. J316sAP is a private runner and
-    # must not be required for this fork to build.
     runs-on: macos-14
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # GL4ES 1.1.6 is built from upstream. The output keeps Amethyst's existing
-      # filename during the compatibility test so renderer selection does not change.
       - name: Build GL4ES 1.1.6 legacy renderer
         shell: bash
         run: |
@@ -41,6 +35,7 @@ jobs:
           curl -L --fail --retry 3 -o ios.toolchain.cmake https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DDEFAULT_ES=2 \
             -DNOX11=ON \
             -DNOEGL=OFF \
@@ -73,25 +68,21 @@ jobs:
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}.ipa
           path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}.ipa
-
       - name: Upload regular tipa
         uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}-trollstore.tipa
           path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}-trollstore.tipa
-
       - name: Upload slimmed ipa
         uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}.ipa
           path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}.ipa
-
       - name: Upload slimmed tipa
         uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}-trollstore.tipa
           path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}-trollstore.tipa
-
       - name: Upload Amethyst dSYM
         uses: actions/upload-artifact@v4
         if: matrix.platform_name == 'ios'
