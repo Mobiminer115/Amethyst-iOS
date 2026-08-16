@@ -19,31 +19,22 @@ jobs:
           - platform: 2
             platform_name: ios
 
-    runs-on: J316sAP
+    # Use a standard GitHub-hosted macOS runner. J316sAP is a private runner and
+    # must not be required for this fork to build.
+    runs-on: macos-14
+
     steps:
-      - name: Remove work folders
-        run: |
-          echo "before"
-          ls -lah ./
-          rm -rf ./* || true
-          rm -rf ./.??* || true
-          echo "after"
-          ls -lah ./
-
       - name: Checkout repository
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Checkout repository submodules
-        run: git submodule update --init --recursive
-
-      # GL4ES 1.1.6 is built from the upstream tagged source. The output keeps
-      # Amethyst's existing libgl4es_114.dylib filename so renderer selection
-      # and older Java/LWJGL configurations do not need to change yet.
+      # GL4ES 1.1.6 is built from upstream. The output keeps Amethyst's existing
+      # filename during the compatibility test so renderer selection does not change.
       - name: Build GL4ES 1.1.6 legacy renderer
         shell: bash
         run: |
           set -euo pipefail
-          export PATH=/opt/procursus/bin:$PATH
           rm -rf gl4es
           git clone --depth 1 --branch v1.1.6 https://github.com/ptitSeb/gl4es.git gl4es
           cd gl4es
@@ -60,7 +51,6 @@ jobs:
           test -f lib/libGL.dylib
           cp -f lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
           cd ..
-          echo 'Built GL4ES 1.1.6 and staged it as libgl4es_114.dylib'
 
       - name: Verify staged GL4ES binary
         shell: bash
@@ -69,51 +59,42 @@ jobs:
           test -f Natives/resources/Frameworks/libgl4es_114.dylib
           file Natives/resources/Frameworks/libgl4es_114.dylib
           otool -L Natives/resources/Frameworks/libgl4es_114.dylib || true
-          strings Natives/resources/Frameworks/libgl4es_114.dylib | grep -m1 -E '1\.1\.[456]' || true
 
       - name: Build for ${{ matrix.platform_name }}
+        shell: bash
         run: |
-          export PATH=/opt/homebrew/bin:$PATH
+          set -euo pipefail
           export SLIMMED=1
-          if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
-          elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
-          else
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-          fi
+          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
 
       - name: Upload regular ipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}.ipa
           path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}.ipa
 
       - name: Upload regular tipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}-trollstore.tipa
           path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}-trollstore.tipa
 
       - name: Upload slimmed ipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}.ipa
           path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}.ipa
 
       - name: Upload slimmed tipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}-trollstore.tipa
           path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}-trollstore.tipa
 
-      - name: Upload PojavLauncher.dSYM
-        uses: actions/upload-artifact@main
+      - name: Upload Amethyst dSYM
+        uses: actions/upload-artifact@v4
         if: matrix.platform_name == 'ios'
         with:
           name: AngelAuraAmethyst.dSYM
           path: artifacts/AngelAuraAmethyst.dSYM
-
-      # CI probe: this no-op marker intentionally triggers a push build after Actions is enabled.
-      # It can be removed once the first GL4ES 1.1.6 build has completed.
