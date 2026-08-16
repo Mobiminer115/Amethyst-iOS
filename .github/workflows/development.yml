@@ -114,3 +114,6 @@ jobs:
         with:
           name: AngelAuraAmethyst.dSYM
           path: artifacts/AngelAuraAmethyst.dSYM
+
+      # CI probe: this no-op marker intentionally triggers a push build after Actions is enabled.
+      # It can be removed once the first GL4ES 1.1.6 build has completed.
