@@ -49,8 +49,6 @@ jobs:
           p.write_text(s)
           PY
 
-          # GL4ES 1.1.6's CMake target does not inherit the generic linker flags
-          # reliably on Darwin, so patch its target explicitly for this build.
           python3 - <<'PY'
           from pathlib import Path
           p = Path('src/CMakeLists.txt')
@@ -92,8 +90,8 @@ jobs:
         run: |
           set -euo pipefail
           export SLIMMED=1
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+          make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+          make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
 
       - name: Upload regular ipa
         uses: actions/upload-artifact@v4
