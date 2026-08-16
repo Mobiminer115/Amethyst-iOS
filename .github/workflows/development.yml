@@ -104,10 +104,10 @@ jobs:
           set -euo pipefail
           export SLIMMED=1
           export BOOTJDK="$JAVA_HOME/bin"
-          # JavaLauncher.m uses Mach exception APIs; expose Apple's Mach declarations
-          # to the native C/Obj-C compilation without modifying upstream launcher code.
-          export CFLAGS="${CFLAGS:-} -include mach/mach.h"
-          export OBJCFLAGS="${OBJCFLAGS:-} -include mach/mach.h"
+          # JavaLauncher.m uses Mach exception APIs. The umbrella mach/mach.h does not
+          # expose all declarations with the current Apple SDK, so include the exact headers.
+          export CFLAGS="${CFLAGS:-} -include mach/mach.h -include mach/mach_init.h -include mach/task.h"
+          export OBJCFLAGS="${OBJCFLAGS:-} -include mach/mach.h -include mach/mach_init.h -include mach/task.h"
           make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BOOTJDK="$BOOTJDK"
           make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BOOTJDK="$BOOTJDK"
 
