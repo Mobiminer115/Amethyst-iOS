@@ -49,8 +49,21 @@ jobs:
           p.write_text(s)
           PY
 
+          # GL4ES 1.1.6's CMake target does not inherit the generic linker flags
+          # reliably on Darwin, so patch its target explicitly for this build.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/CMakeLists.txt')
+          s = p.read_text()
+          marker = 'else()\n    add_library(GL SHARED ${GL_SRC})\n'
+          replacement = 'else()\n    add_library(GL SHARED ${GL_SRC})\n    if(CMAKE_SYSTEM_NAME MATCHES "iOS")\n        target_link_libraries(GL "-framework OpenGLES")\n    endif()\n'
+          if marker not in s:
+              raise SystemExit('GL shared-library target marker not found')
+          s = s.replace(marker, replacement, 1)
+          p.write_text(s)
+          PY
+
           curl -L --fail --retry 3 -o ios.toolchain.cmake https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
-          export GL4ES_IOS_LDFLAGS='-framework OpenGLES'
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
@@ -59,10 +72,8 @@ jobs:
             -DNOEGL=OFF \
             -DSTATICLIB=OFF \
             -DPLATFORM=OS64 \
-            -DCMAKE_C_FLAGS='-Wno-error=implicit-function-declaration' \
-            -DCMAKE_SHARED_LINKER_FLAGS="$GL4ES_IOS_LDFLAGS" \
-            -DCMAKE_MODULE_LINKER_FLAGS="$GL4ES_IOS_LDFLAGS" \
-            -DCMAKE_EXE_LINKER_FLAGS="$GL4ES_IOS_LDFLAGS"
+            -DDEPLOYMENT_TARGET=13.0 \
+            -DCMAKE_C_FLAGS='-Wno-error=implicit-function-declaration'
           cmake --build build --config RelWithDebInfo --target GL --verbose
           test -f lib/libGL.dylib
           cp -f lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
@@ -74,7 +85,7 @@ jobs:
           set -euo pipefail
           test -f Natives/resources/Frameworks/libgl4es_114.dylib
           file Natives/resources/Frameworks/libgl4es_114.dylib
-          otool -L Natives/resources/Frameworks/libgl4es_114.dylib || true
+          otool -L Natives/resources/Frameworks/libgl4es_114.dylib
 
       - name: Build for ${{ matrix.platform_name }}
         shell: bash
