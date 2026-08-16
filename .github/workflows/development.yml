@@ -34,7 +34,6 @@ jobs:
           cd gl4es
 
           # Darwin/AppleClang does not support GCC-style symbol aliases.
-          # Replace the two GL4ES aliases with normal forwarding functions.
           python3 - <<'PY'
           from pathlib import Path
           p = Path('src/gl/directstate.c')
@@ -61,7 +60,8 @@ jobs:
             -DNOEGL=OFF \
             -DSTATICLIB=OFF \
             -DPLATFORM=OS64 \
-            -DCMAKE_C_FLAGS='-Wno-error=implicit-function-declaration'
+            -DCMAKE_C_FLAGS='-Wno-error=implicit-function-declaration' \
+            -DCMAKE_SHARED_LINKER_FLAGS='-framework OpenGLES'
           cmake --build build --config RelWithDebInfo --target GL
           test -f lib/libGL.dylib
           cp -f lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
