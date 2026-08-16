@@ -32,6 +32,26 @@ jobs:
           rm -rf gl4es
           git clone --depth 1 --branch v1.1.6 https://github.com/ptitSeb/gl4es.git gl4es
           cd gl4es
+
+          # Darwin/AppleClang does not support GCC-style symbol aliases.
+          # Replace the two GL4ES aliases with normal forwarding functions.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/gl/directstate.c')
+          s = p.read_text()
+          replacements = {
+              'AliasDecl(void,gl4es_glEnableClientStatei,(GLenum array, GLuint index),gl4es_glEnableClientStateIndexed);':
+              'void APIENTRY_GL4ES gl4es_glEnableClientStatei(GLenum array, GLuint index) { gl4es_glEnableClientStateIndexed(array, index); }',
+              'AliasDecl(void,gl4es_glDisableClientStatei,(GLenum array, GLuint index),gl4es_glDisableClientStateIndexed);':
+              'void APIENTRY_GL4ES gl4es_glDisableClientStatei(GLenum array, GLuint index) { gl4es_glDisableClientStateIndexed(array, index); }',
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'missing expected GL4ES source line: {old}')
+              s = s.replace(old, new)
+          p.write_text(s)
+          PY
+
           curl -L --fail --retry 3 -o ios.toolchain.cmake https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake \
